@@ -1,6 +1,3 @@
-// Laboratorio 2 microcontroladores 
-// GPIOs, Timers y FSM: lavadora automatica
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -33,11 +30,9 @@ ESTADO estado;
 /*** INTERRUPCIONES ***/
 
 // Interrupción para el botón ON/OFF
-ISR(INT0)
-{
+ISR(INT0_vect){
     // Enciendo LED suministro de agua
     PORTB |= (1 << PB7);
-
 }
 
 
@@ -48,18 +43,29 @@ int main(void)
     // Se habilita interrupción global
     sei();
 
-    // Se configuran salidas en puerto B
+    // Se configuran entradas y salidas en puerto B
     DDRB = 0xFF;
 
-    // Se configuran entradas
+    // Se inicializan salidas en puerto B
+    PORTB = 0x00;
 
-    // Se establece PB7 como salida
-    DDRB |= (1 << PB7);
+    // Se configuran entradas y salidas en puerto A
+    //DDRA 
 
-    // Se habilita la interrupcion por INT0
+    // Se inicializan entradas en puerto A
+    //DDRB = 0x00;
+
+    // Se configuran entradas y salidas en puerto D
+    DDRD = 0x73;
+
+    // Se inicializan entradas en puerto D
+    PORTD |= (1 << ISC01 )
+
+    // Se habilita la interrupcion externa por INT0
     GIMSK |= (1 << INT0 ); 
 
-    // Interrupción sucede con cualquier cambio 
+    // EL flanco creciente en INT0 genera la interrupcion
+    MCUCR |= (1 << ISC01 )|(1 << ISC00 );
 
     while(1)
     {
