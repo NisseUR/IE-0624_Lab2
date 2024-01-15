@@ -6,7 +6,7 @@
 
 <item itemtype="Push" CircId="Push-3" mainComp="false" Show_id="false" Show_Val="false" Pos="212,520" rotation="540" hflip="1" vflip="1" label="Push-3" idLabPos="-12,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Norm_Close="false" Poles="1 _Poles" />
 
-<item itemtype="Push" CircId="Push-4" mainComp="false" Show_id="false" Show_Val="false" Pos="376,596" rotation="180" hflip="1" vflip="1" label="Push-4" idLabPos="-12,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Norm_Close="false" Poles="1 _Poles" />
+<item itemtype="Push" CircId="Push-4" mainComp="false" Show_id="false" Show_Val="false" Pos="336,596" rotation="180" hflip="1" vflip="1" label="Push-4" idLabPos="-12,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Norm_Close="false" Poles="1 _Poles" />
 
 <item itemtype="Seven Segment" CircId="Seven Segment-5" mainComp="false" Show_id="false" Show_Val="false" Pos="924,456" rotation="0" hflip="1" vflip="1" label="Seven Segment-5" idLabPos="20,-44" labelrot="0" valLabPos="-16,20" valLabRot="0" NumDisplays="2 _7seg" Color="Yellow" Vertical_Pins="false" CommonCathode="true" Threshold="2.4 V" MaxCurrent="0.02 A" Resistance="1 Ω" />
 
@@ -28,7 +28,7 @@
 
 <item itemtype="Resistor" CircId="Resistor-23" mainComp="false" ShowProp="Resistance" Show_id="false" Show_Val="true" Pos="552,504" rotation="0" hflip="1" vflip="1" label="Resistor-23" idLabPos="-16,-24" labelrot="0" valLabPos="-16,6" valLabRot="0" Resistance="100 Ω" />
 
-<item itemtype="Fixed Voltage" CircId="Fixed Voltage-71" mainComp="false" Show_id="false" Show_Val="false" Pos="432,596" rotation="180" hflip="1" vflip="1" label="Fixed Voltage-71" idLabPos="-64,-24" labelrot="0" valLabPos="-16,8" valLabRot="0" Out="true" Voltage="5 V" />
+<item itemtype="Fixed Voltage" CircId="Fixed Voltage-71" mainComp="false" Show_id="false" Show_Val="false" Pos="296,596" rotation="0" hflip="1" vflip="1" label="Fixed Voltage-71" idLabPos="-64,-24" labelrot="0" valLabPos="-16,8" valLabRot="0" Out="true" Voltage="5 V" />
 
 <item itemtype="Rectangle" CircId="Rectangle-97" mainComp="false" Show_id="true" Show_Val="false" Pos="156,520" rotation="0" hflip="1" vflip="1" label="Baja" idLabPos="-8,-7" labelrot="0" valLabPos="-16,20" valLabRot="0" H_size="35 _Pixels" V_size="30 _Pixels" Border="2 _Pixels" Z_Value="-1" Color="#a0a0a4" Opacity="1" />
 
@@ -36,7 +36,7 @@
 
 <item itemtype="Rectangle" CircId="Rectangle-201" mainComp="false" Show_id="true" Show_Val="false" Pos="156,424" rotation="0" hflip="1" vflip="1" label="Alta" idLabPos="-8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" H_size="35 _Pixels" V_size="30 _Pixels" Border="2 _Pixels" Z_Value="-1" Color="#a0a0a4" Opacity="1" />
 
-<item itemtype="Rectangle" CircId="Rectangle-202" mainComp="false" Show_id="true" Show_Val="false" Pos="376,628" rotation="0" hflip="1" vflip="1" label="ON/OFF" idLabPos="-19,-7" labelrot="0" valLabPos="-16,20" valLabRot="0" H_size="47 _Pixels" V_size="30 _Pixels" Border="2 _Pixels" Z_Value="-1" Color="#a0a0a4" Opacity="1" />
+<item itemtype="Rectangle" CircId="Rectangle-202" mainComp="false" Show_id="true" Show_Val="false" Pos="324,628" rotation="0" hflip="1" vflip="1" label="ON/OFF" idLabPos="-16.3755,-5.4253" labelrot="0" valLabPos="-16,20" valLabRot="0" H_size="47 _Pixels" V_size="30 _Pixels" Border="2 _Pixels" Z_Value="-1" Color="#a0a0a4" Opacity="1" />
 
 <item itemtype="Ground" CircId="Ground-467" mainComp="false" Show_id="false" Show_Val="false" Pos="724,384" rotation="270" hflip="1" vflip="1" label="Ground-467" idLabPos="-16,8" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
@@ -100,7 +100,11 @@
 
 <item itemtype="Ground" CircId="Ground-1546" mainComp="false" Show_id="false" Show_Val="false" Pos="496,608" rotation="360" hflip="1" vflip="1" label="Ground-1546" idLabPos="-16,8" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
-<item itemtype="Probe" CircId="Probe-1626" mainComp="false" Show_id="false" Show_Val="true" Pos="376,556" rotation="-45" hflip="1" vflip="1" label="Probe-1626" idLabPos="16,-16" labelrot="45" valLabPos="16,0" valLabRot="45" ShowVolt="true" Threshold="2.5 V" />
+<item itemtype="Probe" CircId="Probe-1626" mainComp="false" Show_id="false" Show_Val="true" Pos="384,556" rotation="-45" hflip="1" vflip="1" label="Probe-1626" idLabPos="16,-16" labelrot="45" valLabPos="16,0" valLabRot="45" ShowVolt="true" Threshold="2.5 V" />
+
+<item itemtype="Ground" CircId="Ground-1714" mainComp="false" Show_id="false" Show_Val="false" Pos="416,652" rotation="360" hflip="1" vflip="1" label="Ground-1714" idLabPos="-16,8" labelrot="0" valLabPos="-16,20" valLabRot="0" />
+
+<item itemtype="Resistor" CircId="Resistor-1723" mainComp="false" ShowProp="Resistance" Show_id="false" Show_Val="true" Pos="416,600" rotation="90" hflip="1" vflip="1" label="Resistor-1723" idLabPos="-16,-24" labelrot="0" valLabPos="-16,6" valLabRot="0" Resistance="100 Ω" />
 
 <item itemtype="Node" CircId="Node-560" mainComp="false" Pos="28,708" />
 
@@ -125,6 +129,8 @@
 <item itemtype="Node" CircId="Node-1621" mainComp="false" Pos="432,448" />
 
 <item itemtype="Node" CircId="Node-1624" mainComp="false" Pos="404,496" />
+
+<item itemtype="Node" CircId="Node-1725" mainComp="false" Pos="416,572" />
 
 <item itemtype="Connector" uid="connector-1627" startpinid="Led-10-lPin" endpinid="Resistor-20-rPin" pointList="592,384,568,384" />
 
@@ -268,8 +274,14 @@
 
 <item itemtype="Connector" uid="connector-1697" startpinid="Node-1624-2" endpinid="Node-1538-1" pointList="404,496,328,496,328,508" />
 
-<item itemtype="Connector" uid="connector-1698" startpinid="Fixed Voltage-71-outnod" endpinid="Push-4-pinP0" pointList="416,596,392,596" />
+<item itemtype="Connector" uid="Connector-1719" startpinid="Fixed Voltage-71-outnod" endpinid="Push-4-switch0pinN" pointList="312,596,320,596" />
 
-<item itemtype="Connector" uid="Connector-1699" startpinid="Push-4-switch0pinN" endpinid="tiny4313-6-PORTD2" pointList="360,596,360,536,424,536,424,488,448,488" />
+<item itemtype="Connector" uid="Connector-1703" startpinid="tiny4313-6-PORTD2" endpinid="Node-1725-0" pointList="448,488,416,488,416,572" />
+
+<item itemtype="Connector" uid="Connector-1724" startpinid="Resistor-1723-lPin" endpinid="Node-1725-1" pointList="416,584,416,572" />
+
+<item itemtype="Connector" uid="Connector-1726" startpinid="Node-1725-2" endpinid="Push-4-pinP0" pointList="416,572,352,572,352,596" />
+
+<item itemtype="Connector" uid="Connector-1728" startpinid="Ground-1714-Gnd" endpinid="Resistor-1723-rPin" pointList="416,636,416,616" />
 
 </circuit>
