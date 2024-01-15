@@ -1,17 +1,17 @@
-FAMILY=-mpic14 # arquitectura del microcontrolador.
-MCU=-p12f683 # modelo específico de microcontrolador
-CC=sdcc # compilador a utilizar, SDCC (Small Device C Compiler)
-LD=sdcc # enlazador a utilizar
-CFLAGS=-I. -I/usr/local/share/sdcc/non-free/include
-TARGET=lavadora
-
-SRCS = lavadora.c
+MCU=attiny4313
+F_CPU=1000000
+CC=avr-gcc
+OBJCOPY=avr-objcopy
+CFLAGS=-std=c99 -Wall -g -Os -mmcu=${MCU} -DF_CPU=${F_CPU} -I.
+TARGET=main
+SRCS=blink.c
 
 all:
-	${CC} --use-non-free ${FAMILY} ${MCU} ${CFLAGS} -o ${TARGET} ${SRCS}
-#	${LD} -o ${TARGET}.elf ${TARGET}.o
-#	${OBJCOPY} -j .text -j .data -O ihex ${TARGET}.o ${TARGET}.hex
-#	${SIZE} -C --mcu=${MCU} ${TARGET}.elf
+	${CC} ${CFLAGS} -o ${TARGET}.bin ${SRCS}
+	${OBJCOPY} -j .text -j .data -O ihex ${TARGET}.bin ${TARGET}.hex
+
+flash:
+	avrdude -p ${MCU} -c usbasp -U flash:w:${TARGET}.hex:i -F -P usb
 
 clean:
-	rm -f *.c~ *.h~ *.o *.elf *.hex *.asm
+	rm -f *.bin *.hex
