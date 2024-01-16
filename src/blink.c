@@ -44,6 +44,8 @@ ESTADO estado;
 /*** VARIABLES GLOBALES ***/
 volatile int boton_on_off = 0;
 
+int segundos = 0; 
+int ciclos_tiempo = 0; 
 
 /*** DECLARACIÓN FUNCIONES ***/
 
@@ -96,8 +98,21 @@ int main(void)
     // Se inicializa variable del boton ON/OFF:
     boton_on_off = 0;
 
+    // Se inicializa la variable del tiempo en segundos 
+    segundos = 0; 
+
     // Se habilita interrupción global
     sei();
+
+    // Configuración del temporizador
+    TCCR0A = 0x00; // Establecer el Timer0 en modo normal
+
+    TCCR0B = (1 << CS00) | (1 << CS02); // Establecer prescaler a 1024
+
+    TCNT0 = 0; // Inicializar valor del contador del Timer0
+
+    TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
+}
 
     while(1)
     {
@@ -159,4 +174,36 @@ void FSM()
             break;
 
     } 
+}
+
+/** Rutina de interrupcion **/
+
+// ISR del Timer0
+ISR(TIMER0_OVF_vect) {
+    static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
+    contador++;
+    if (contador >= 1000) { // Timer0 interrumpe cada 1 ms
+        contador = 0;
+        segundos--;
+        if (segundos <= 0) {
+            // Cambiar al siguiente estado de la FSM
+            
+        }
+    }
+}
+
+// Función para configurar el tiempo según el nivel de carga 
+void configurarTiempoSuministroDeAgua(TipoCarga carga) {
+    switch (carga) {
+        case CARGA_BAJA:
+            segundos = Suministro_de_agua_baja;
+            break;
+        case CARGA_MEDIA:
+            segundos = Suministro_de_agua_media;
+            break;
+        case CARGA_ALTA:
+            segundos = Suministro_de_agua_alta;
+            break;
+    }
+    estado = SUMINISTRO_DE_AGUA;
 }
