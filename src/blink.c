@@ -3,6 +3,26 @@
 
 /*** MACROS ***/
 
+// tiempos para suministrar agua según nivel de carga 
+#define Suministro_de_agua_baja = 1
+#define Suministro_de_agua_media = 2
+#define Suministro_de_agua_alta = 3
+
+// tiempos para lavar según nivel de carga 
+#define lavar_baja = 3
+#define lavar_media = 7
+#define lavar_alta = 10
+
+// tiempos para enjuagar según nivel de carga 
+#define enjuagar_baja = 2 
+#define enjuagar_media = 4
+#define enjuagar_alta = 5
+
+// tiempos para centrifugar según nivel de carga 
+#define centrifugar_baja = 3
+#define centrifugar_media = 6
+#define centrifugar_alta = 9
+
 
 /*** ESTADOS ***/
 
