@@ -52,6 +52,11 @@ int ciclos_tiempo = 0;
 // Maquina de estados
 void FSM(void);
 
+void configurarTiempoSuministroDeAgua();
+void configurarTiempoLavar();
+void configurarTiempoEnjuagar();
+void configurarTiempoCentrifugar();
+
 /*** INTERRUPCIONES ***/
 
 // Interrupción para el botón ON/OFF
@@ -209,3 +214,70 @@ void configurarTiempoSuministroDeAgua(TipoCarga carga) {
     }
     estado = SUMINISTRO_DE_AGUA;
 }
+
+// Funciones para configurar el tiempo según el nivel de carga 
+
+// tiempo de suministrar el agua 
+void configurarTiempoSuministroDeAgua(TipoCarga carga) {
+    switch (carga) {
+        case CARGA_BAJA:
+            segundos = Suministro_de_agua_baja;
+            break;
+        case CARGA_MEDIA:
+            segundos = Suministro_de_agua_media;
+            break;
+        case CARGA_ALTA:
+            segundos = Suministro_de_agua_alta;
+            break;
+    }
+    estado = SUMINISTRO_DE_AGUA;
+}
+
+// tiempo de lavar 
+void configurarTiempoLavar(TipoCarga carga) {
+    switch (carga) {
+        case CARGA_BAJA:
+            segundos = lavar_baja;
+            break;
+        case CARGA_MEDIA:
+            segundos = lavar_media;
+            break;
+        case CARGA_ALTA:
+            segundos = lavar_alta;
+            break;
+    }
+    estado = SUMINISTRO_DE_AGUA;
+}
+
+// tiempo de enjuagar
+void configurarTiempoEnjuagar(TipoCarga carga) {
+    switch (carga) {
+        case CARGA_BAJA:
+            segundos = enjuagar_baja;
+            break;
+        case CARGA_MEDIA:
+            segundos = enjuagar_media;
+            break;
+        case CARGA_ALTA:
+            segundos = enjuagar_alta;
+            break;
+    }
+    estado = SUMINISTRO_DE_AGUA;
+}
+
+// tiempo de centrifugar
+void configurarTiempoCentrifugar(TipoCarga carga) {
+    switch (carga) {
+        case CARGA_BAJA:
+            segundos = centrifugar_baja;
+            break;
+        case CARGA_MEDIA:
+            segundos = centrifugar_media;
+            break;
+        case CARGA_ALTA:
+            segundos = centrifugar_alta;
+            break;
+    }
+    estado = SUMINISTRO_DE_AGUA;
+}
+
