@@ -182,11 +182,13 @@ void FSM()
 ISR(TIMER0_OVF_vect) {
     static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
     contador++;
+    // Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo, contador se reinicia a 0 y la variable segundos se decrementa en 1.
     if (contador >= 1000) { // Timer0 interrumpe cada 1 ms
         contador = 0;
-        segundos--;
+        segundos--; // tiempo restante para una operación 
         if (segundos <= 0) {
             // Cambiar al siguiente estado de la FSM
+            // el tiempo asignado para la fase actual ha finalizado, y la lavadora debe cambiar al siguiente estado
             
         }
     }
