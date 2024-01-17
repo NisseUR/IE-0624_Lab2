@@ -4,24 +4,24 @@
 /*** MACROS ***/
 
 // tiempos para suministrar agua según nivel de carga 
-#define Suministro_de_agua_baja = 1
-#define Suministro_de_agua_media = 2
-#define Suministro_de_agua_alta = 3
+#define Suministro_de_agua_baja 1
+#define Suministro_de_agua_media 2
+#define Suministro_de_agua_alta 3
 
 // tiempos para lavar según nivel de carga 
-#define lavar_baja = 3
-#define lavar_media = 7
-#define lavar_alta = 10
+#define lavar_baja 3
+#define lavar_media 7
+#define lavar_alta 10
 
 // tiempos para enjuagar según nivel de carga 
-#define enjuagar_baja = 2 
-#define enjuagar_media = 4
-#define enjuagar_alta = 5
+#define enjuagar_baja 2 
+#define enjuagar_media 4
+#define enjuagar_alta 5
 
 // tiempos para centrifugar según nivel de carga 
-#define centrifugar_baja = 3
-#define centrifugar_media = 6
-#define centrifugar_alta = 9
+#define centrifugar_baja 3
+#define centrifugar_media 6
+#define centrifugar_alta 9
 
 
 /*** ESTADOS ***/
@@ -38,6 +38,18 @@ typedef enum {
 
 // Variable de estado actual
 ESTADO estado;
+
+/*** TIPOS DE CARGA ***/
+
+// Enumeración para los tipos de carga en la lavadora
+typedef enum {
+    CARGA_BAJA,
+    CARGA_MEDIA,
+    CARGA_ALTA
+} TipoCarga;
+
+// Variable para almacenar el tipo de carga actual seleccionado
+TipoCarga cargaSeleccionada;
 
 // Se utiliza 8-bit timer
 
@@ -145,7 +157,7 @@ void FSM()
         break;
 
         // Estado de seleccion de carga
-         case (SELECCIONE_CARGA):
+        case (SELECCIONE_CARGA):
             // Se conecta display
             //PORTD |= (1<<PORTD4)|(1<<PORTD5);
             PORTD |= (1<<PORTD4);
@@ -194,30 +206,25 @@ ISR(TIMER0_OVF_vect) {
         if (segundos <= 0) {
             // Cambiar al siguiente estado de la FSM
             // el tiempo asignado para la fase actual ha finalizado, y la lavadora debe cambiar al siguiente estado
-            
+           switch(estado) {
+                case SUMINISTRO_DE_AGUA:
+                    configurarTiempoSuministroDeAgua(cargaSeleccionada);
+                    break;
+                case LAVAR:
+                    configurarTiempoLavar(cargaSeleccionada);
+                    break;
+                case ENJUAGAR:
+                    configurarTiempoEnjuagar(cargaSeleccionada);
+                    break; 
+                case CENTRIFUGAR:
+                    configurarTiempoCentrifugar(cargaSeleccionada);
+                    break;            
+            } 
         }
     }
 }
 
 // Función para configurar el tiempo según el nivel de carga 
-void configurarTiempoSuministroDeAgua(TipoCarga carga) {
-    switch (carga) {
-        case CARGA_BAJA:
-            segundos = Suministro_de_agua_baja;
-            break;
-        case CARGA_MEDIA:
-            segundos = Suministro_de_agua_media;
-            break;
-        case CARGA_ALTA:
-            segundos = Suministro_de_agua_alta;
-            break;
-    }
-    estado = SUMINISTRO_DE_AGUA;
-}
-
-// Funciones para configurar el tiempo según el nivel de carga 
-
-// tiempo de suministrar el agua 
 void configurarTiempoSuministroDeAgua(TipoCarga carga) {
     switch (carga) {
         case CARGA_BAJA:
@@ -246,7 +253,7 @@ void configurarTiempoLavar(TipoCarga carga) {
             segundos = lavar_alta;
             break;
     }
-    estado = SUMINISTRO_DE_AGUA;
+    estado = LAVAR;
 }
 
 // tiempo de enjuagar
@@ -262,7 +269,7 @@ void configurarTiempoEnjuagar(TipoCarga carga) {
             segundos = enjuagar_alta;
             break;
     }
-    estado = SUMINISTRO_DE_AGUA;
+    estado = ENJUAGAR;
 }
 
 // tiempo de centrifugar
@@ -278,6 +285,6 @@ void configurarTiempoCentrifugar(TipoCarga carga) {
             segundos = centrifugar_alta;
             break;
     }
-    estado = SUMINISTRO_DE_AGUA;
+    estado = CENTRIFUGAR;
 }
 
