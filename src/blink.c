@@ -81,7 +81,7 @@ ISR(INT0_vect){
 
 int main(void)
 {
-
+    // Se desabilitan las interrupciones
     cli();
     
     // Se configuran entradas y salidas en puerto B
@@ -129,7 +129,7 @@ int main(void)
     TCNT0 = 0; // Inicializar valor del contador del Timer0
 
     TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
-}
+
 
     while(1)
     {
@@ -145,45 +145,74 @@ void FSM()
     {
         // Estado lavadora apagada
         case(LAVADORA_APAGADA):
-        // Se desconecta el display
-        PORTD &= ~(1<<PORTD4) & ~(1<<PORTD5);
-        //PORTD |= (1<<PORTD4) | (1<<PORTD5);
-        //Esperando interrupcion por boton ON/OFF para cambiar de estado
-        
-        if( boton_on_off==1 ){
-            estado=SELECCIONE_CARGA;
-            PORTB |= (1<<PORTB7);
-        }
-        break;
+            // Se desconecta el display
+            PORTD &= ~(1<<PORTD4) & ~(1<<PORTD5);
+            //Esperando interrupcion por boton ON/OFF para cambiar de estado
+            if( boton_on_off==1 ){
+                estado=SELECCIONE_CARGA;
+            }
+            break;
 
         // Estado de seleccion de carga
         case (SELECCIONE_CARGA):
             // Se conecta display
-            //PORTD |= (1<<PORTD4)|(1<<PORTD5);
-            PORTD |= (1<<PORTD4);
+            PORTD |= (1<<PORTD4)|(1<<PORTD5);
 
             // Encender LEDs de modo que se proyecte 00
             PORTB &= ~(1<<PORTB3)&~(1<<PORTB2)&~(1<<PORTB1)&~(1<<PORTB0);
 
             // Poner en estado bajo el boton ON/OFF
             boton_on_off=0;
-            // Aqui falta desplegar el tiempo segun la carga seleccionada
+
+            //
+            if(boton_carga==0){
+                estado=SUMINISTRO_DE_AGUA;
+            }
             break;
 
         // Estado de suministro de agua
         case (SUMINISTRO_DE_AGUA):
+
+            // Se enciende LED modo: Suministro de agua
+            PORTB |= (1<<PORTB7);
+
+            // Aqui falta desplegar el tiempo segun la carga seleccionada
             break;
 
         // Estado donde se lava la ropa
         case (LAVAR):
+
+            // Se apaga LED modo: Suministro de agua
+            PORTB &= ~(1<<PORTB7)
+
+            // Se enciende LED modo: Lavar la ropa
+            PORTB |= (1<<PORTB6);
+
+            // Aqui falta desplegar el tiempo segun la carga seleccionada
             break;
 
         // Estado donde se enjuaga la ropa
         case (ENJUAGAR):
+
+            // Se apaga LED modo: Lavar la ropa
+            PORTB &= ~(1<<PORTB6)
+
+            // Se enciende LED modo: Enjuagar la ropa
+            PORTB |= (1<<PORTB5);
+
+            // Aqui falta desplegar el tiempo segun la carga seleccionada
             break;
 
         // Estado donde se realizado el centrifugado de la ropa
         case (CENTRIFUGAR):
+
+            // Se apaga LED modo: Enjuagar la ropa
+            PORTB &= ~(1<<PORTB5)
+
+            // Se enciende LED modo: Centrifugar la ropa
+            PORTB |= (1<<PORTB4);
+
+            // Aqui falta desplegar el tiempo segun la carga seleccionada
             break; 
         
         default:
@@ -199,13 +228,15 @@ void FSM()
 ISR(TIMER0_OVF_vect) {
     static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
     contador++;
-    // Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo, contador se reinicia a 0 y la variable segundos se decrementa en 1.
+    /* Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo,
+    contador se reinicia a 0 y la variable segundos se decrementa en 1.*/
     if (contador >= 1000) { // Timer0 interrumpe cada 1 ms
         contador = 0;
-        segundos--; // tiempo restante para una operación 
+        segundos--; // Tiempo restante para una operación 
         if (segundos <= 0) {
-            // Cambiar al siguiente estado de la FSM
-            // el tiempo asignado para la fase actual ha finalizado, y la lavadora debe cambiar al siguiente estado
+            /* Cambiar al siguiente estado de la FSM.
+            El tiempo asignado para la fase actual ha finalizado,
+            y la lavadora debe cambiar al siguiente estado*/
            switch(estado) {
                 case SUMINISTRO_DE_AGUA:
                     configurarTiempoSuministroDeAgua(cargaSeleccionada);
@@ -218,14 +249,15 @@ ISR(TIMER0_OVF_vect) {
                     break; 
                 case CENTRIFUGAR:
                     configurarTiempoCentrifugar(cargaSeleccionada);
-                    break;            
+                    break;         
+                    // Falta estado para apagar la lavadora?   
             } 
         }
     }
 }
 
 // Función para configurar el tiempo según el nivel de carga 
-void configurarTiempoSuministroDeAgua(TipoCarga carga) {
+void configurarTiempoSuministroDeAgua(TipoCarga carga){
     switch (carga) {
         case CARGA_BAJA:
             segundos = Suministro_de_agua_baja;
