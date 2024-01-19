@@ -55,6 +55,9 @@ TipoCarga cargaSeleccionada;
 
 /*** VARIABLES GLOBALES ***/
 volatile int boton_on_off = 0;
+volatile int boton_carga_alta = 0;
+volatile int boton_carga_media = 0;
+volatile int boton_carga_baja = 0;
 
 int segundos = 0; 
 int ciclos_tiempo = 0; 
@@ -77,6 +80,20 @@ ISR(INT0_vect){
     boton_on_off=1;
 }
 
+// Interrupción por botón carga alta
+ISR(PCINT2_vect){
+    // Boton cambia de estado porque se ha presionado
+    boton_carga_alta = 1;
+}
+
+// Interrupción por botón carga media
+ISR(INT1_vect){
+    // Boton cambia de estado porque se ha presionado
+    boton_carga_media = 1;
+
+}
+
+
 /*** MAIN ***/
 
 int main(void)
@@ -91,23 +108,28 @@ int main(void)
     PORTB = 0x00;
 
     // Se configuran entradas y salidas en puerto A
-    DDRA = 0x04;
+    DDRA = 0x00;
 
     // Se inicializan entradas en puerto A
     PORTA = 0x00;
 
     // Se configuran entradas y salidas en puerto D
-    DDRD = 0x7A;
+    DDRD = 0x30;
 
     // Se inicializan entradas en puerto D
-    //PORTD &= (0<<PORTD6)|(0<<PORTD5)|(0<<PORTD4)|(0<<PORTD3)|(0<<PORTD2)|(0<<PORTD2)|(0<<PORTD1)|(0<<PORTD0);
     PORTD = 0x00;
 
-    // Se habilita la interrupcion externa para INT0
-    GIMSK |= (1<<INT0); 
+    // Se habilita la interrupcion externa para INT0, INT1 y PCINT11
+    GIMSK |= (1<<INT0)|(1<<INT1)|(1<<PCIE2); 
 
-    // EL flanco creciente en INT0 genera la interrupcion
+    // Se habilita interrupcion por cambio bajo/alto en PCINT11
+    PCMSK2 |= (1<<PCINT11);
+
+    // El flanco creciente en INT0 genera la interrupcion
     MCUCR |= (1 << ISC01 )|(1 << ISC00 );
+
+    // El flanco creciente en INT1 genera la interrupcion
+    MCUCR |= (1 << ISC11 )|(1 << ISC10 );
 
     // Se establece el estado inicial de la FSM:
     estado = LAVADORA_APAGADA;
@@ -128,8 +150,7 @@ int main(void)
 
     TCNT0 = 0; // Inicializar valor del contador del Timer0
 
-    TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
-
+    //TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
 
     while(1)
     {
@@ -164,10 +185,18 @@ void FSM()
             // Poner en estado bajo el boton ON/OFF
             boton_on_off=0;
 
-            //
-            if(boton_carga==0){
-                estado=SUMINISTRO_DE_AGUA;
+            // Esperando interrupcion por boton carga
+
+            if(boton_carga_alta==1){
+                estado = SUMINISTRO_DE_AGUA;
+                //cargaSeleccionada = CARGA_ALTA;
             }
+            else if (boton_carga_media==1)
+            {
+                estado=SUMINISTRO_DE_AGUA;
+                //cargaSeleccionada = CARGA_MEDIA;
+            }
+            
             break;
 
         // Estado de suministro de agua
@@ -183,7 +212,7 @@ void FSM()
         case (LAVAR):
 
             // Se apaga LED modo: Suministro de agua
-            PORTB &= ~(1<<PORTB7)
+            PORTB &= ~(1<<PORTB7);
 
             // Se enciende LED modo: Lavar la ropa
             PORTB |= (1<<PORTB6);
@@ -195,7 +224,7 @@ void FSM()
         case (ENJUAGAR):
 
             // Se apaga LED modo: Lavar la ropa
-            PORTB &= ~(1<<PORTB6)
+            PORTB &= ~(1<<PORTB6);
 
             // Se enciende LED modo: Enjuagar la ropa
             PORTB |= (1<<PORTB5);
@@ -207,13 +236,14 @@ void FSM()
         case (CENTRIFUGAR):
 
             // Se apaga LED modo: Enjuagar la ropa
-            PORTB &= ~(1<<PORTB5)
+            PORTB &= ~(1<<PORTB5);
 
             // Se enciende LED modo: Centrifugar la ropa
             PORTB |= (1<<PORTB4);
 
             // Aqui falta desplegar el tiempo segun la carga seleccionada
             break; 
+        
         
         default:
             estado = LAVADORA_APAGADA;
@@ -224,19 +254,20 @@ void FSM()
 
 /** Rutina de interrupcion **/
 
+/*
 // ISR del Timer0
 ISR(TIMER0_OVF_vect) {
     static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
     contador++;
-    /* Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo,
-    contador se reinicia a 0 y la variable segundos se decrementa en 1.*/
+    // Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo,
+    // contador se reinicia a 0 y la variable segundos se decrementa en 1.
     if (contador >= 1000) { // Timer0 interrumpe cada 1 ms
         contador = 0;
         segundos--; // Tiempo restante para una operación 
         if (segundos <= 0) {
-            /* Cambiar al siguiente estado de la FSM.
-            El tiempo asignado para la fase actual ha finalizado,
-            y la lavadora debe cambiar al siguiente estado*/
+            // Cambiar al siguiente estado de la FSM.
+            //El tiempo asignado para la fase actual ha finalizado,
+            //y la lavadora debe cambiar al siguiente estado
            switch(estado) {
                 case SUMINISTRO_DE_AGUA:
                     configurarTiempoSuministroDeAgua(cargaSeleccionada);
@@ -254,7 +285,9 @@ ISR(TIMER0_OVF_vect) {
             } 
         }
     }
-}
+}*/
+
+
 
 // Función para configurar el tiempo según el nivel de carga 
 void configurarTiempoSuministroDeAgua(TipoCarga carga){
