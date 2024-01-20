@@ -43,6 +43,7 @@ ESTADO estado;
 
 // Enumeración para los tipos de carga en la lavadora
 typedef enum {
+    CARGA_CERO,
     CARGA_BAJA,
     CARGA_MEDIA,
     CARGA_ALTA
@@ -58,19 +59,24 @@ volatile int boton_on_off = 0;
 volatile int boton_carga_alta = 0;
 volatile int boton_carga_media = 0;
 volatile int boton_carga_baja = 0;
+unsigned int x=1;
+
 
 int segundos = 0; 
 int ciclos_tiempo = 0; 
+unsigned int units, decimals;
+unsigned int variable_BCD[4];
 
 /*** DECLARACIÓN FUNCIONES ***/
 
-// Maquina de estados
-void FSM(void);
-
+void FSM(void); // Maquina de estados
 void configurarTiempoSuministroDeAgua();
 void configurarTiempoLavar();
 void configurarTiempoEnjuagar();
 void configurarTiempoCentrifugar();
+void showNumber(int num);
+void delay(unsigned int time);
+void bcd_convert(int num, unsigned int *bcd);
 
 /*** INTERRUPCIONES ***/
 
@@ -93,6 +99,17 @@ ISR(INT1_vect){
 
 }
 
+// ISR del Timer0 
+ISR(TIMER0_OVF_vect) {
+    static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
+    contador++;
+    // Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo,
+    // contador se reinicia a 0 y la variable segundos se decrementa en 1.
+    if(contador >= 1000){ // Timer0 interrumpe cada 1 ms
+        contador = 0;
+        segundos--; // Tiempo restante para una operación   
+        } 
+}
 
 /*** MAIN ***/
 
@@ -134,14 +151,20 @@ int main(void)
     // Se establece el estado inicial de la FSM:
     estado = LAVADORA_APAGADA;
 
+    // Se establece el estado inicial de la carga seleccionada:
+    cargaSeleccionada = CARGA_CERO;
+
     // Se inicializa variable del boton ON/OFF:
     boton_on_off = 0;
+
+    // Se inicializa variable del boton_carga_alta:
+    boton_carga_alta = 0;
 
     // Se inicializa la variable del tiempo en segundos 
     segundos = 0; 
 
-    // Se habilita interrupción global
-    sei();
+    // Se inicializa la variable del tiempo en segundos 
+    ciclos_tiempo = 0; 
 
     // Configuración del temporizador
     TCCR0A = 0x00; // Establecer el Timer0 en modo normal
@@ -150,7 +173,10 @@ int main(void)
 
     TCNT0 = 0; // Inicializar valor del contador del Timer0
 
-    //TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
+    TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
+
+    // Se habilita interrupción global
+    sei();
 
     while(1)
     {
@@ -160,8 +186,7 @@ int main(void)
 }
 
 /*** FUNCIONES ***/
-void FSM()
-{ 
+void FSM(){ 
     switch(estado)
     {
         // Estado lavadora apagada
@@ -186,17 +211,17 @@ void FSM()
             boton_on_off=0;
 
             // Esperando interrupcion por boton carga
-
             if(boton_carga_alta==1){
+                cargaSeleccionada = CARGA_ALTA;
                 estado = SUMINISTRO_DE_AGUA;
-                //cargaSeleccionada = CARGA_ALTA;
+                configurarTiempoSuministroDeAgua(cargaSeleccionada);
             }
             else if (boton_carga_media==1)
             {
-                estado=SUMINISTRO_DE_AGUA;
-                //cargaSeleccionada = CARGA_MEDIA;
+                cargaSeleccionada = CARGA_MEDIA;
+                estado = SUMINISTRO_DE_AGUA;
+                configurarTiempoSuministroDeAgua(cargaSeleccionada);
             }
-            
             break;
 
         // Estado de suministro de agua
@@ -205,7 +230,25 @@ void FSM()
             // Se enciende LED modo: Suministro de agua
             PORTB |= (1<<PORTB7);
 
-            // Aqui falta desplegar el tiempo segun la carga seleccionada
+            // Desplegar el tiempo segun la carga seleccionada
+            switch(cargaSeleccionada){
+                case (CARGA_ALTA):
+                        if(segundos>0){
+                            showNumber(segundos);
+                            //PORTB |= (1<<PORTB4);
+                        }else{
+                            showNumber(segundos);
+                            estado = LAVAR;
+                        }
+                    break;
+                case (CARGA_MEDIA):
+                    //showNumber(segundos);
+                    break;
+                case CARGA_BAJA:
+                    break;
+                case CARGA_CERO:
+                    break;
+                }
             break;
 
         // Estado donde se lava la ropa
@@ -252,43 +295,6 @@ void FSM()
     } 
 }
 
-/** Rutina de interrupcion **/
-
-/*
-// ISR del Timer0
-ISR(TIMER0_OVF_vect) {
-    static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
-    contador++;
-    // Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo,
-    // contador se reinicia a 0 y la variable segundos se decrementa en 1.
-    if (contador >= 1000) { // Timer0 interrumpe cada 1 ms
-        contador = 0;
-        segundos--; // Tiempo restante para una operación 
-        if (segundos <= 0) {
-            // Cambiar al siguiente estado de la FSM.
-            //El tiempo asignado para la fase actual ha finalizado,
-            //y la lavadora debe cambiar al siguiente estado
-           switch(estado) {
-                case SUMINISTRO_DE_AGUA:
-                    configurarTiempoSuministroDeAgua(cargaSeleccionada);
-                    break;
-                case LAVAR:
-                    configurarTiempoLavar(cargaSeleccionada);
-                    break;
-                case ENJUAGAR:
-                    configurarTiempoEnjuagar(cargaSeleccionada);
-                    break; 
-                case CENTRIFUGAR:
-                    configurarTiempoCentrifugar(cargaSeleccionada);
-                    break;         
-                    // Falta estado para apagar la lavadora?   
-            } 
-        }
-    }
-}*/
-
-
-
 // Función para configurar el tiempo según el nivel de carga 
 void configurarTiempoSuministroDeAgua(TipoCarga carga){
     switch (carga) {
@@ -300,6 +306,8 @@ void configurarTiempoSuministroDeAgua(TipoCarga carga){
             break;
         case CARGA_ALTA:
             segundos = Suministro_de_agua_alta;
+            break;
+        case CARGA_CERO:
             break;
     }
     estado = SUMINISTRO_DE_AGUA;
@@ -317,6 +325,8 @@ void configurarTiempoLavar(TipoCarga carga) {
         case CARGA_ALTA:
             segundos = lavar_alta;
             break;
+        case CARGA_CERO:
+            break;
     }
     estado = LAVAR;
 }
@@ -332,6 +342,8 @@ void configurarTiempoEnjuagar(TipoCarga carga) {
             break;
         case CARGA_ALTA:
             segundos = enjuagar_alta;
+            break;
+        case CARGA_CERO:
             break;
     }
     estado = ENJUAGAR;
@@ -349,7 +361,47 @@ void configurarTiempoCentrifugar(TipoCarga carga) {
         case CARGA_ALTA:
             segundos = centrifugar_alta;
             break;
+        case CARGA_CERO:
+            break;
     }
     estado = CENTRIFUGAR;
 }
 
+void showNumber(int num) {
+    units = num % 10;
+    decimals = num / 10;
+
+    // PORTD5 ON
+    PORTD|= (1<<PORTD5);
+
+    bcd_convert(decimals, variable_BCD);
+    PORTB |= (variable_BCD[0]<<PORTB3)|(variable_BCD[1]<<PORTB2)|(variable_BCD[2]<<PORTB1)|(variable_BCD[3]<<PORTB0);
+    delay(1);
+
+    // PORTD5 OFF
+    PORTD &= ~(1<<PORTD5);
+    // PORTD4 ON
+    PORTD|= (1<<PORTD4); 
+
+    bcd_convert(units, variable_BCD);
+    PORTB |= (variable_BCD[0]<<PORTB3)|(variable_BCD[1]<<PORTB2)|(variable_BCD[2]<<PORTB1)|(variable_BCD[3]<<PORTB0);
+
+    //delay(1);
+    // PORTD4 OFF
+    PORTD &= ~(1<<PORTD4);
+
+}
+
+void delay(unsigned int time) {
+    unsigned int i, j;
+    for (i = 0; i < time; i++) {
+        for (j = 0; j < 1275; j++);
+    }
+}
+
+void bcd_convert(int num, unsigned int *bcd) {
+    bcd[0] = num / 8;
+    bcd[1] = (num % 8) / 4;
+    bcd[2] = (num % 4) / 2;
+    bcd[3] = num % 2;
+}
