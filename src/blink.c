@@ -59,7 +59,7 @@ volatile int boton_on_off = 0;
 volatile int boton_carga_alta = 0;
 volatile int boton_carga_media = 0;
 volatile int boton_carga_baja = 0;
-unsigned int x=1;
+volatile int flag = 0;
 
 
 int segundos = 0; 
@@ -100,6 +100,22 @@ ISR(INT1_vect){
 }
 
 // ISR del Timer0 
+ISR(TIMER0_OVF_vect){
+    //PORTB |= (1<<PORTB5);
+    if(ciclos_tiempo>=128){
+        ciclos_tiempo=0;
+        segundos--;
+        flag=1;
+
+    }else{
+        ciclos_tiempo++;
+        flag=0;
+    }
+} 
+
+
+/*
+// ISR del Timer0 
 ISR(TIMER0_OVF_vect) {
     static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
     contador++;
@@ -109,7 +125,7 @@ ISR(TIMER0_OVF_vect) {
         contador = 0;
         segundos--; // Tiempo restante para una operación   
         } 
-}
+}*/
 
 /*** MAIN ***/
 
@@ -227,22 +243,28 @@ void FSM(){
         // Estado de suministro de agua
         case (SUMINISTRO_DE_AGUA):
 
+            // Se conecta display
+            PORTD |= (1<<PORTD4)|(1<<PORTD5);
+
             // Se enciende LED modo: Suministro de agua
             PORTB |= (1<<PORTB7);
 
             // Desplegar el tiempo segun la carga seleccionada
             switch(cargaSeleccionada){
                 case (CARGA_ALTA):
-                        if(segundos>0){
+                        if(flag){
+                            cli();
                             showNumber(segundos);
-                            //PORTB |= (1<<PORTB4);
-                        }else{
+                            sei();
+                            flag = 0;
+                        }else if(flag && segundos==0){
+                            cli();
                             showNumber(segundos);
+                            sei();
                             estado = LAVAR;
                         }
                     break;
                 case (CARGA_MEDIA):
-                    //showNumber(segundos);
                     break;
                 case CARGA_BAJA:
                     break;
@@ -259,6 +281,9 @@ void FSM(){
 
             // Se enciende LED modo: Lavar la ropa
             PORTB |= (1<<PORTB6);
+
+            // Encender LEDs de modo que se proyecte 00
+            PORTB &= ~(1<<PORTB3)&~(1<<PORTB2)&~(1<<PORTB1)&~(1<<PORTB0);
 
             // Aqui falta desplegar el tiempo segun la carga seleccionada
             break;
@@ -286,10 +311,7 @@ void FSM(){
 
             // Aqui falta desplegar el tiempo segun la carga seleccionada
             break; 
-        
-        
         default:
-            estado = LAVADORA_APAGADA;
             break;
 
     } 
