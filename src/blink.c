@@ -59,7 +59,6 @@ volatile int boton_on_off = 0;
 volatile int boton_carga_alta = 0;
 volatile int boton_carga_media = 0;
 volatile int boton_carga_baja = 0;
-volatile int flag = 0;
 
 
 int segundos = 0; 
@@ -76,7 +75,6 @@ void configurarTiempoEnjuagar();
 void configurarTiempoCentrifugar();
 void showNumber(int num);
 void delay(unsigned int time);
-void bcd_convert(int num, unsigned int *bcd);
 
 /*** INTERRUPCIONES ***/
 
@@ -96,36 +94,30 @@ ISR(PCINT2_vect){
 ISR(INT1_vect){
     // Boton cambia de estado porque se ha presionado
     boton_carga_media = 1;
-
 }
 
-// ISR del Timer0 
-ISR(TIMER0_OVF_vect){
-    //PORTB |= (1<<PORTB5);
-    if(ciclos_tiempo>=128){
-        ciclos_tiempo=0;
-        segundos--;
-        flag=1;
+// Interrupción por botón carga baja
+ISR(PCINT1_vect){
+    // Boton cambia de estado porque se ha presionado
+    boton_carga_baja = 1;
+}
 
-    }else{
+ISR(TIMER0_COMPA_vect){
+
+    if(boton_carga_alta || boton_carga_baja || boton_carga_media){
         ciclos_tiempo++;
-        flag=0;
-    }
-} 
-
-
-/*
-// ISR del Timer0 
-ISR(TIMER0_OVF_vect) {
-    static int contador = 0; // Para contar las interrupciones del temporizador hasta que se alcanza un cierto valor.
-    contador++;
-    // Cuando contador alcanza 1000, significa que ha pasado aprox 1 segundo,
-    // contador se reinicia a 0 y la variable segundos se decrementa en 1.
-    if(contador >= 1000){ // Timer0 interrumpe cada 1 ms
-        contador = 0;
-        segundos--; // Tiempo restante para una operación   
+        // MCU opera en simulador a 16MHz y se prescala a razon de 
+        // 1024. 16.384 ms para que TCNT0 = OCR0A = 0xFF. 
+        // Por lo que, 62 iteraciones completan 1s aprox.
+        if(ciclos_tiempo >= 62){ // Timer0 interrumpe cada 1 ms
+            ciclos_tiempo = 0;
+            segundos--; // Tiempo restante para una operación   
         } 
-}*/
+
+    }
+    
+}
+
 
 /*** MAIN ***/
 
@@ -152,11 +144,14 @@ int main(void)
     // Se inicializan entradas en puerto D
     PORTD = 0x00;
 
-    // Se habilita la interrupcion externa para INT0, INT1 y PCINT11
-    GIMSK |= (1<<INT0)|(1<<INT1)|(1<<PCIE2); 
+    // Se habilita la interrupcion externa para INT0, INT1, PCINT11 y PCINT8
+    GIMSK |= (1<<INT0)|(1<<INT1)|(1<<PCIE2)|(1<<PCIE1); 
 
     // Se habilita interrupcion por cambio bajo/alto en PCINT11
     PCMSK2 |= (1<<PCINT11);
+
+    // Se habilita interrupcion por cambio bajo/alto en PCINT8
+    PCMSK1 |= (1<<PCINT8);
 
     // El flanco creciente en INT0 genera la interrupcion
     MCUCR |= (1 << ISC01 )|(1 << ISC00 );
@@ -170,11 +165,11 @@ int main(void)
     // Se establece el estado inicial de la carga seleccionada:
     cargaSeleccionada = CARGA_CERO;
 
-    // Se inicializa variable del boton ON/OFF:
+    // Se inicializan botones:
     boton_on_off = 0;
-
-    // Se inicializa variable del boton_carga_alta:
-    boton_carga_alta = 0;
+    boton_carga_alta = 0; 
+    boton_carga_media = 0;
+    boton_carga_baja = 0;
 
     // Se inicializa la variable del tiempo en segundos 
     segundos = 0; 
@@ -189,7 +184,10 @@ int main(void)
 
     TCNT0 = 0; // Inicializar valor del contador del Timer0
 
-    TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
+    //TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
+    TIMSK |= 0b1;
+
+    OCR0A = 0xFF;
 
     // Se habilita interrupción global
     sei();
@@ -209,6 +207,10 @@ void FSM(){
         case(LAVADORA_APAGADA):
             // Se desconecta el display
             PORTD &= ~(1<<PORTD4) & ~(1<<PORTD5);
+
+            // Se apaga LED modo: Centrigufar
+            PORTB &= ~(1<<PORTB4);
+
             //Esperando interrupcion por boton ON/OFF para cambiar de estado
             if( boton_on_off==1 ){
                 estado=SELECCIONE_CARGA;
@@ -238,13 +240,19 @@ void FSM(){
                 estado = SUMINISTRO_DE_AGUA;
                 configurarTiempoSuministroDeAgua(cargaSeleccionada);
             }
+             else if (boton_carga_baja==1)
+            {
+                cargaSeleccionada = CARGA_BAJA;
+                estado = SUMINISTRO_DE_AGUA;
+                configurarTiempoSuministroDeAgua(cargaSeleccionada);
+            }
             break;
 
         // Estado de suministro de agua
         case (SUMINISTRO_DE_AGUA):
 
-            // Se conecta display
-            PORTD |= (1<<PORTD4)|(1<<PORTD5);
+            // Se elimina una cifra del display
+            PORTD &= ~(1<<PORTD4);
 
             // Se enciende LED modo: Suministro de agua
             PORTB |= (1<<PORTB7);
@@ -252,28 +260,41 @@ void FSM(){
             // Desplegar el tiempo segun la carga seleccionada
             switch(cargaSeleccionada){
                 case (CARGA_ALTA):
-                        if(flag){
-                            cli();
-                            showNumber(segundos);
-                            sei();
-                            flag = 0;
-                        }else if(flag && segundos==0){
-                            cli();
-                            showNumber(segundos);
-                            sei();
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            configurarTiempoLavar(cargaSeleccionada);
                             estado = LAVAR;
+                            
                         }
                     break;
                 case (CARGA_MEDIA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            configurarTiempoLavar(cargaSeleccionada);
+                            estado = LAVAR;
+                        }
                     break;
-                case CARGA_BAJA:
+                case (CARGA_BAJA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = LAVAR;
+                            configurarTiempoLavar(cargaSeleccionada);
+                        }
                     break;
-                case CARGA_CERO:
+                case (CARGA_CERO):
                     break;
+                    
+
                 }
             break;
 
-        // Estado donde se lava la ropa
+                                                                    /***    ESTADO LAVAR ROPA    ***/ 
         case (LAVAR):
 
             // Se apaga LED modo: Suministro de agua
@@ -282,13 +303,41 @@ void FSM(){
             // Se enciende LED modo: Lavar la ropa
             PORTB |= (1<<PORTB6);
 
-            // Encender LEDs de modo que se proyecte 00
-            PORTB &= ~(1<<PORTB3)&~(1<<PORTB2)&~(1<<PORTB1)&~(1<<PORTB0);
-
-            // Aqui falta desplegar el tiempo segun la carga seleccionada
+            // Desplegar el tiempo segun la carga seleccionada
+            switch(cargaSeleccionada){
+                case (CARGA_ALTA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = ENJUAGAR;
+                            configurarTiempoEnjuagar(cargaSeleccionada);
+                        }
+                    break;
+                case (CARGA_MEDIA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = ENJUAGAR;
+                            configurarTiempoEnjuagar(cargaSeleccionada);
+                        }
+                    break;
+                case (CARGA_BAJA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = ENJUAGAR;
+                            configurarTiempoEnjuagar(cargaSeleccionada);
+                        }
+                    break;
+                case (CARGA_CERO):
+                    break;
+                }
             break;
 
-        // Estado donde se enjuaga la ropa
+                                                                    /***    ESTADO ENJUAGAR ROPA    ***/ 
         case (ENJUAGAR):
 
             // Se apaga LED modo: Lavar la ropa
@@ -297,10 +346,41 @@ void FSM(){
             // Se enciende LED modo: Enjuagar la ropa
             PORTB |= (1<<PORTB5);
 
-            // Aqui falta desplegar el tiempo segun la carga seleccionada
+             // Desplegar el tiempo segun la carga seleccionada
+            switch(cargaSeleccionada){
+                case (CARGA_ALTA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = CENTRIFUGAR;
+                            configurarTiempoCentrifugar(cargaSeleccionada);
+                        }
+                    break;
+                case (CARGA_MEDIA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = CENTRIFUGAR;
+                            configurarTiempoCentrifugar(cargaSeleccionada);
+                        }
+                    break;
+                case (CARGA_BAJA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = CENTRIFUGAR;
+                            configurarTiempoCentrifugar(cargaSeleccionada);
+                        }
+                    break;
+                case (CARGA_CERO):
+                    break;
+                }
             break;
 
-        // Estado donde se realizado el centrifugado de la ropa
+                                                                    /***    ESTADO CENTRIFUGAR ROPA    ***/ 
         case (CENTRIFUGAR):
 
             // Se apaga LED modo: Enjuagar la ropa
@@ -309,12 +389,37 @@ void FSM(){
             // Se enciende LED modo: Centrifugar la ropa
             PORTB |= (1<<PORTB4);
 
-            // Aqui falta desplegar el tiempo segun la carga seleccionada
+            // Desplegar el tiempo segun la carga seleccionada
+            switch(cargaSeleccionada){
+                case (CARGA_ALTA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = LAVADORA_APAGADA;
+                        }
+                    break;
+                case (CARGA_MEDIA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = LAVADORA_APAGADA;
+                        }
+                    break;
+                case (CARGA_BAJA):
+                        cli();
+                        showNumber(segundos);
+                        sei();
+                        if(segundos<0){
+                            estado = LAVADORA_APAGADA;
+                        }
+                    break;
+                case (CARGA_CERO):
+                    break;
+                }
             break; 
-        default:
-            break;
-
-    } 
+    }
 }
 
 // Función para configurar el tiempo según el nivel de carga 
@@ -332,7 +437,7 @@ void configurarTiempoSuministroDeAgua(TipoCarga carga){
         case CARGA_CERO:
             break;
     }
-    estado = SUMINISTRO_DE_AGUA;
+    //estado = SUMINISTRO_DE_AGUA;
 }
 
 // tiempo de lavar 
@@ -350,7 +455,7 @@ void configurarTiempoLavar(TipoCarga carga) {
         case CARGA_CERO:
             break;
     }
-    estado = LAVAR;
+    //estado = LAVAR;
 }
 
 // tiempo de enjuagar
@@ -368,7 +473,7 @@ void configurarTiempoEnjuagar(TipoCarga carga) {
         case CARGA_CERO:
             break;
     }
-    estado = ENJUAGAR;
+    //estado = ENJUAGAR;
 }
 
 // tiempo de centrifugar
@@ -386,31 +491,35 @@ void configurarTiempoCentrifugar(TipoCarga carga) {
         case CARGA_CERO:
             break;
     }
-    estado = CENTRIFUGAR;
+    //estado = CENTRIFUGAR;
 }
 
 void showNumber(int num) {
-    units = num % 10;
-    decimals = num / 10;
 
-    // PORTD5 ON
-    PORTD|= (1<<PORTD5);
+    if(num==10){
+        PORTB = (PORTB & 0xF0) | 0x00;
+    }else if(num == 9){
+        PORTB = (PORTB & 0xF0) | 0x09;
+    }else if(num == 8){
+        PORTB = (PORTB & 0xF0) | 0x08;
+    }else if(num == 7){
+        PORTB = (PORTB & 0xF0) | 0x07;
+    }else if(num == 6){
+        PORTB = (PORTB & 0xF0) | 0x06;
+    }else if(num == 5){
+        PORTB = (PORTB & 0xF0) | 0x05;
+    }else if(num == 4){
+        PORTB = (PORTB & 0xF0) | 0x04;
+    }else if(num == 3){
+        PORTB = (PORTB & 0xF0) | 0x03;
+    }else if(num == 2){
+        PORTB = (PORTB & 0xF0) | 0x02;
+    }else if(num == 1){
+        PORTB = (PORTB & 0xF0) | 0x01;
+    }else if(num == 0){
+        PORTB = (PORTB & 0xF0) | 0x00;
+    }
 
-    bcd_convert(decimals, variable_BCD);
-    PORTB |= (variable_BCD[0]<<PORTB3)|(variable_BCD[1]<<PORTB2)|(variable_BCD[2]<<PORTB1)|(variable_BCD[3]<<PORTB0);
-    delay(1);
-
-    // PORTD5 OFF
-    PORTD &= ~(1<<PORTD5);
-    // PORTD4 ON
-    PORTD|= (1<<PORTD4); 
-
-    bcd_convert(units, variable_BCD);
-    PORTB |= (variable_BCD[0]<<PORTB3)|(variable_BCD[1]<<PORTB2)|(variable_BCD[2]<<PORTB1)|(variable_BCD[3]<<PORTB0);
-
-    //delay(1);
-    // PORTD4 OFF
-    PORTD &= ~(1<<PORTD4);
 
 }
 
@@ -419,11 +528,4 @@ void delay(unsigned int time) {
     for (i = 0; i < time; i++) {
         for (j = 0; j < 1275; j++);
     }
-}
-
-void bcd_convert(int num, unsigned int *bcd) {
-    bcd[0] = num / 8;
-    bcd[1] = (num % 8) / 4;
-    bcd[2] = (num % 4) / 2;
-    bcd[3] = num % 2;
 }
