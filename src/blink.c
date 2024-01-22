@@ -56,15 +56,18 @@ TipoCarga cargaSeleccionada;
 
 /*** VARIABLES GLOBALES ***/
 volatile int boton_on_off = 0;
+volatile int pausa = 1;
 volatile int boton_carga_alta = 0;
 volatile int boton_carga_media = 0;
 volatile int boton_carga_baja = 0;
+volatile int aux1 = 0, aux2 = 0, flag_pausa=0;
 
 
 int segundos = 0; 
 int ciclos_tiempo = 0; 
 unsigned int units, decimals;
 unsigned int variable_BCD[4];
+int flag = 0; 
 
 /*** DECLARACIÓN FUNCIONES ***/
 
@@ -74,12 +77,21 @@ void configurarTiempoLavar();
 void configurarTiempoEnjuagar();
 void configurarTiempoCentrifugar();
 void showNumber(int num);
-void delay(unsigned int time);
 
 /*** INTERRUPCIONES ***/
 
 // Interrupción para el botón ON/OFF
 ISR(INT0_vect){
+    //Pausa
+    if(boton_on_off==1){
+        if(pausa ==0){
+            pausa = 1;
+            //PORTD |= (1<<PORTD1);
+        }else{
+            pausa = 0;
+            flag_pausa = 1;
+        }
+    }
     // Boton cambia de estado porque se ha presionado
     boton_on_off=1;
 }
@@ -139,7 +151,8 @@ int main(void)
     PORTA = 0x00;
 
     // Se configuran entradas y salidas en puerto D
-    DDRD = 0x30;
+    //DDRD = 0x30;
+    DDRD = 0x72;
 
     // Se inicializan entradas en puerto D
     PORTD = 0x00;
@@ -184,10 +197,11 @@ int main(void)
 
     TCNT0 = 0; // Inicializar valor del contador del Timer0
 
-    //TIMSK |= (1 << TOIE0); // Habilitar la interrupción por desbordamiento del Timer0
     TIMSK |= 0b1;
 
     OCR0A = 0xFF;
+
+    flag = 0;
 
     // Se habilita interrupción global
     sei();
@@ -220,13 +234,13 @@ void FSM(){
         // Estado de seleccion de carga
         case (SELECCIONE_CARGA):
             // Se conecta display
-            PORTD |= (1<<PORTD4)|(1<<PORTD5);
+            PORTD |= (1<<PORTD5);
 
             // Encender LEDs de modo que se proyecte 00
             PORTB &= ~(1<<PORTB3)&~(1<<PORTB2)&~(1<<PORTB1)&~(1<<PORTB0);
 
             // Poner en estado bajo el boton ON/OFF
-            boton_on_off=0;
+           //boton_on_off=0;
 
             // Esperando interrupcion por boton carga
             if(boton_carga_alta==1){
@@ -260,33 +274,65 @@ void FSM(){
             // Desplegar el tiempo segun la carga seleccionada
             switch(cargaSeleccionada){
                 case (CARGA_ALTA):
+                    while(pausa){
                         cli();
                         showNumber(segundos);
                         sei();
                         if(segundos<0){
                             configurarTiempoLavar(cargaSeleccionada);
                             estado = LAVAR;
-                            
+                            break;
                         }
+                    }
+                    if(pausa==0 && flag_pausa == 1){
+                        aux1 = segundos;
+                        aux2 = ciclos_tiempo;
+                        flag_pausa = 0;
+                    }else if(pausa==0){
+                        segundos = aux1;
+                        ciclos_tiempo = aux2;
+                    }
                     break;
                 case (CARGA_MEDIA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            configurarTiempoLavar(cargaSeleccionada);
-                            estado = LAVAR;
+                    while(pausa){
+                            cli();
+                            showNumber(segundos);
+                            sei();
+                            if(segundos<0){
+                                configurarTiempoLavar(cargaSeleccionada);
+                                estado = LAVAR;
+                                break;
+                            }
                         }
-                    break;
+                        if(pausa==0 && flag_pausa == 1){
+                            aux1 = segundos;
+                            aux2 = ciclos_tiempo;
+                            flag_pausa = 0;
+                        }else if(pausa==0){
+                            segundos = aux1;
+                            ciclos_tiempo = aux2;
+                        }
+                        break;
                 case (CARGA_BAJA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            estado = LAVAR;
-                            configurarTiempoLavar(cargaSeleccionada);
+                        while(pausa){
+                            cli();
+                            showNumber(segundos);
+                            sei();
+                            if(segundos<0){
+                                configurarTiempoLavar(cargaSeleccionada);
+                                estado = LAVAR;
+                                break;
+                            }
                         }
-                    break;
+                        if(pausa==0 && flag_pausa == 1){
+                            aux1 = segundos;
+                            aux2 = ciclos_tiempo;
+                            flag_pausa = 0;
+                        }else if(pausa==0){
+                            segundos = aux1;
+                            ciclos_tiempo = aux2;
+                        }
+                        break;
                 case (CARGA_CERO):
                     break;
                     
@@ -294,7 +340,7 @@ void FSM(){
                 }
             break;
 
-                                                                    /***    ESTADO LAVAR ROPA    ***/ 
+                                                                            /***    ESTADO LAVAR ROPA    ***/ 
         case (LAVAR):
 
             // Se apaga LED modo: Suministro de agua
@@ -306,38 +352,71 @@ void FSM(){
             // Desplegar el tiempo segun la carga seleccionada
             switch(cargaSeleccionada){
                 case (CARGA_ALTA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            estado = ENJUAGAR;
-                            configurarTiempoEnjuagar(cargaSeleccionada);
-                        }
+                    while(pausa){
+                                cli();
+                                showNumber(segundos);
+                                sei();
+                                if(segundos<0){
+                                    configurarTiempoEnjuagar(cargaSeleccionada);
+                                    estado = ENJUAGAR;
+                                    break;
+                                }
+                            }
+                            if(pausa==0 && flag_pausa == 1){
+                                aux1 = segundos;
+                                aux2 = ciclos_tiempo;
+                                flag_pausa = 0;
+                            }else if(pausa==0){
+                                segundos = aux1;
+                                ciclos_tiempo = aux2;
+                            }
                     break;
                 case (CARGA_MEDIA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            estado = ENJUAGAR;
-                            configurarTiempoEnjuagar(cargaSeleccionada);
-                        }
+                        while(pausa){
+                                cli();
+                                showNumber(segundos);
+                                sei();
+                                if(segundos<0){
+                                    configurarTiempoEnjuagar(cargaSeleccionada);
+                                    estado = ENJUAGAR;
+                                    break;
+                                }
+                            }
+                            if(pausa==0 && flag_pausa == 1){
+                                aux1 = segundos;
+                                aux2 = ciclos_tiempo;
+                                flag_pausa = 0;
+                            }else if(pausa==0){
+                                segundos = aux1;
+                                ciclos_tiempo = aux2;
+                            }
                     break;
                 case (CARGA_BAJA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            estado = ENJUAGAR;
-                            configurarTiempoEnjuagar(cargaSeleccionada);
-                        }
+                        while(pausa){
+                                cli();
+                                showNumber(segundos);
+                                sei();
+                                if(segundos<0){
+                                    configurarTiempoEnjuagar(cargaSeleccionada);
+                                    estado = ENJUAGAR;
+                                    break;
+                                }
+                            }
+                            if(pausa==0 && flag_pausa == 1){
+                                aux1 = segundos;
+                                aux2 = ciclos_tiempo;
+                                flag_pausa = 0;
+                            }else if(pausa==0){
+                                segundos = aux1;
+                                ciclos_tiempo = aux2;
+                            }
                     break;
                 case (CARGA_CERO):
                     break;
                 }
             break;
 
-                                                                    /***    ESTADO ENJUAGAR ROPA    ***/ 
+                                                                            /***    ESTADO ENJUAGAR ROPA    ***/ 
         case (ENJUAGAR):
 
             // Se apaga LED modo: Lavar la ropa
@@ -349,38 +428,72 @@ void FSM(){
              // Desplegar el tiempo segun la carga seleccionada
             switch(cargaSeleccionada){
                 case (CARGA_ALTA):
+                    while(pausa){
                         cli();
                         showNumber(segundos);
                         sei();
                         if(segundos<0){
-                            estado = CENTRIFUGAR;
-                            configurarTiempoCentrifugar(cargaSeleccionada);
+                                configurarTiempoCentrifugar(cargaSeleccionada);
+                                estado = CENTRIFUGAR;
+                                break;
                         }
-                    break;
+                    }
+                    if(pausa==0 && flag_pausa == 1){
+                        aux1 = segundos;
+                        aux2 = ciclos_tiempo;
+                        flag_pausa = 0;
+                    }else if(pausa==0){
+                        segundos = aux1;
+                        ciclos_tiempo = aux2;
+                    }
+                break;
+                                    
                 case (CARGA_MEDIA):
+                        while(pausa){
                         cli();
                         showNumber(segundos);
                         sei();
                         if(segundos<0){
-                            estado = CENTRIFUGAR;
-                            configurarTiempoCentrifugar(cargaSeleccionada);
+                                configurarTiempoCentrifugar(cargaSeleccionada);
+                                estado = CENTRIFUGAR;
+                                break;
                         }
-                    break;
+                    }
+                    if(pausa==0 && flag_pausa == 1){
+                        aux1 = segundos;
+                        aux2 = ciclos_tiempo;
+                        flag_pausa = 0;
+                    }else if(pausa==0){
+                        segundos = aux1;
+                        ciclos_tiempo = aux2;
+                    }
+                break;
                 case (CARGA_BAJA):
+                        while(pausa){
                         cli();
                         showNumber(segundos);
                         sei();
                         if(segundos<0){
-                            estado = CENTRIFUGAR;
-                            configurarTiempoCentrifugar(cargaSeleccionada);
+                                configurarTiempoCentrifugar(cargaSeleccionada);
+                                estado = CENTRIFUGAR;
+                                break;
                         }
-                    break;
+                    }
+                    if(pausa==0 && flag_pausa == 1){
+                        aux1 = segundos;
+                        aux2 = ciclos_tiempo;
+                        flag_pausa = 0;
+                    }else if(pausa==0){
+                        segundos = aux1;
+                        ciclos_tiempo = aux2;
+                    }
+                break;
                 case (CARGA_CERO):
                     break;
                 }
             break;
 
-                                                                    /***    ESTADO CENTRIFUGAR ROPA    ***/ 
+                                                                            /***    ESTADO CENTRIFUGAR ROPA    ***/ 
         case (CENTRIFUGAR):
 
             // Se apaga LED modo: Enjuagar la ropa
@@ -392,27 +505,63 @@ void FSM(){
             // Desplegar el tiempo segun la carga seleccionada
             switch(cargaSeleccionada){
                 case (CARGA_ALTA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            estado = LAVADORA_APAGADA;
+                    while(pausa){
+                            cli();
+                            showNumber(segundos);
+                            sei();
+                            if(segundos<0){
+                                    estado = LAVADORA_APAGADA;
+                                    boton_on_off=0;
+                                    break;
+                            }
+                        }
+                        if(pausa==0 && flag_pausa == 1){
+                            aux1 = segundos;
+                            aux2 = ciclos_tiempo;
+                            flag_pausa = 0;
+                        }else if(pausa==0){
+                            segundos = aux1;
+                            ciclos_tiempo = aux2;
                         }
                     break;
                 case (CARGA_MEDIA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            estado = LAVADORA_APAGADA;
+                        while(pausa){
+                            cli();
+                            showNumber(segundos);
+                            sei();
+                            if(segundos<0){
+                                    estado = LAVADORA_APAGADA;
+                                    boton_on_off=0;
+                                    break;
+                            }
+                        }
+                        if(pausa==0 && flag_pausa == 1){
+                            aux1 = segundos;
+                            aux2 = ciclos_tiempo;
+                            flag_pausa = 0;
+                        }else if(pausa==0){
+                            segundos = aux1;
+                            ciclos_tiempo = aux2;
                         }
                     break;
                 case (CARGA_BAJA):
-                        cli();
-                        showNumber(segundos);
-                        sei();
-                        if(segundos<0){
-                            estado = LAVADORA_APAGADA;
+                        while(pausa){
+                            cli();
+                            showNumber(segundos);
+                            sei();
+                            if(segundos<0){
+                                    estado = LAVADORA_APAGADA;
+                                    boton_on_off=0;
+                                    break;
+                            }
+                        }
+                        if(pausa==0 && flag_pausa == 1){
+                            aux1 = segundos;
+                            aux2 = ciclos_tiempo;
+                            flag_pausa = 0;
+                        }else if(pausa==0){
+                            segundos = aux1;
+                            ciclos_tiempo = aux2;
                         }
                     break;
                 case (CARGA_CERO):
@@ -437,7 +586,6 @@ void configurarTiempoSuministroDeAgua(TipoCarga carga){
         case CARGA_CERO:
             break;
     }
-    //estado = SUMINISTRO_DE_AGUA;
 }
 
 // tiempo de lavar 
@@ -455,7 +603,6 @@ void configurarTiempoLavar(TipoCarga carga) {
         case CARGA_CERO:
             break;
     }
-    //estado = LAVAR;
 }
 
 // tiempo de enjuagar
@@ -473,7 +620,6 @@ void configurarTiempoEnjuagar(TipoCarga carga) {
         case CARGA_CERO:
             break;
     }
-    //estado = ENJUAGAR;
 }
 
 // tiempo de centrifugar
@@ -491,14 +637,14 @@ void configurarTiempoCentrifugar(TipoCarga carga) {
         case CARGA_CERO:
             break;
     }
-    //estado = CENTRIFUGAR;
 }
 
 void showNumber(int num) {
-
-    if(num==10){
+    if(num == 10){ 
         PORTB = (PORTB & 0xF0) | 0x00;
+        PORTD |= (1<<PORTD4);
     }else if(num == 9){
+        PORTD &= ~(1<<PORTD4); // Apago decimal display
         PORTB = (PORTB & 0xF0) | 0x09;
     }else if(num == 8){
         PORTB = (PORTB & 0xF0) | 0x08;
@@ -521,11 +667,4 @@ void showNumber(int num) {
     }
 
 
-}
-
-void delay(unsigned int time) {
-    unsigned int i, j;
-    for (i = 0; i < time; i++) {
-        for (j = 0; j < 1275; j++);
-    }
 }
